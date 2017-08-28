@@ -39,7 +39,7 @@ class TraceVisualizer(VisdomVisualizer):
 
     def extend(self, s, label, clear=False):
         start = self._start_dict.setdefault(label, self._start)
-        X = np.arange(self._start, self._start + len(s))
+        X = np.arange(start, start + len(s))
         Y = np.array(s)
         self._window = self._visdom.updateTrace(X, Y, self._window, name=label)
         self._start_dict[label] += len(s)
