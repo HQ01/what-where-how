@@ -1,3 +1,5 @@
+import torch as th
+from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 from utilities import GaussianMask
@@ -8,13 +10,12 @@ class MLP(nn.Module):
                  in_features,
                  out_features,
                  features,
-                 linear=nn.Linear,
-                 nonlinear=F.relu):
+                 nonlinear):
         super(MLP, self).__init__()
         shapes = zip((in_features, ) + features, features + (out_features, ))
         self._linear_list = nn.ModuleList()
         for shape in shapes:
-            self._linear_list.append(linear(*shape))
+            self._linear_list.append(nn.Linear(*shape))
         self._nonlinear = nonlinear
 
     def forward(self, data):
@@ -29,17 +30,20 @@ class MLP(nn.Module):
 
 
 class Network0(nn.Module):
-    def __init__(self, feature_extractor, mask_generator, classifier, size, T):
+    def __init__(self, feature_extractor, n_features, size, T):
         super(Network0, self).__init__()
         self._feature_extractor = feature_extractor
-        self._mask_generator = mask_generator
-        self._classifier = classifier
+        self._mask_generator = nn.Linear(n_features, 4)
+        self._classifier = nn.Linear(n_features, 10)
         self._gaussian_mask = GaussianMask(*size)
         self._T = T
 
-    def forward(data):
+    def forward(self, data):
         N = data.size()[0]
-        mask = (th.rand(N, 2) - 0.5) / 2
+        mx = Variable((th.rand(N, 1) - 0.5) / 2)
+        my = Variable((th.rand(N, 1) - 0.5) / 2)
+        sx, sy = Variable(th.rand(N, 1)), Variable(th.rand(N, 1))
+        mask = self._gaussian_mask(mx, my, sx, sy)
         if data.is_cuda:
             mask = mask.cuda()
         prediction_list = []
@@ -47,36 +51,13 @@ class Network0(nn.Module):
             masked = mask * data
             features = self._feature_extractor(masked)
 
-            mx, my, sx, sy = self._mask_generator(features)
+            stats = self._mask_generator(features)
+            mx, my, sx, sy = th.chunk(stats, 4, 1)
+            mx, my = th.tanh(mx), th.tanh(my)
+            sx, sy = th.exp(sx), th.exp(sy)
             mask = self._gaussian_mask(mx, my, sx, sy)
 
             category = self._classifier(features)
             prediction_list.append(category)
 
         return prediction_list
-
-    @staticmethod
-    def loss(prediction_list, label):
-        loss_list = []
-        for prediction in prediction_list:
-            ce = F.cross_entropy(prediction, label)
-            loss_list.append(ce)
-
-        return loss_list
-
-
-class Network1(Network0):
-    def __init__(self, feature_extractor, mask_generator, classifier, size, T,
-                 gamma):
-        super(Network1, self).__init__(feature_extractor, mask_generator,
-                                       classifier, size, T)
-        self._gamma = gamma(T)
-
-    def loss(self, prediction_list, label):
-        loss_list = []
-        for prediction in prediction_list:
-            ce = F.cross_entropy(prediction, label)
-            gamma = self._gamma(i)
-            loss_list.append(ce * gamma)
-
-        return loss_list
