@@ -2,4 +2,4 @@
 
 ## TODO
 
-- Covariance of Gaussian mask.
+- normalize MNIST

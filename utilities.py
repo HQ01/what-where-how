@@ -22,6 +22,9 @@ class GaussianMask(nn.Module):
         self._y = th.unsqueeze(th.cat(y, 1), 0)
         self._x, self._y = Variable(self._x), Variable(self._y)
 
+    def cuda(self):
+        self._x, self._y = self._x.cuda(), self._y.cuda()
+
     def forward(self, mx, my, sx, sy):
         N = mx.size()[0]
         x, y = self._x, self._y
