@@ -36,6 +36,7 @@ class GaussianMask(nn.Module):
             stat = stat.expand(N, self._width, self._height)
             return stat
         mx, my = expand(mx), expand(my)
+        sx, sy = th.clamp(sx, min=1e-3), th.clamp(sy, min=1e-3)
         sx, sy = expand(sx), expand(sy)
 
         z = ((x - mx) / sx)**2 + ((y - my) / sy)**2
