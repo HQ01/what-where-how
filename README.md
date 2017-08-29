@@ -2,4 +2,4 @@
 
 ## TODO
 
-- normalize MNIST
+- evaluate_baseline.py
