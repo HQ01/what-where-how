@@ -61,3 +61,17 @@ class TensorboardVisualizer(Visualizer):
     def _extend(self, s):
         for index, value in enumerate(s):
             self._logger.log_value(self._name, value, self._start + index)
+
+class ImageVisualizer(object):
+    def __init__(self, visdom, opts={}):
+        super(ImageVisualizer, self).__init__()
+        self._visdom = visdom
+        self._opts = opts
+        self._window = None
+
+    def visualize(self, image):
+        image = (image - image.min()) / (image.max() - image.min())
+        if self._window is None:
+            self._window = self._visdom.image(image, opts=self._opts)
+        else:
+            self._window = self._visdom.image(image, self._window, opts=self._opts)

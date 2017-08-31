@@ -26,6 +26,15 @@ class GaussianMask(nn.Module):
         self._x, self._y = self._x.cuda(), self._y.cuda()
 
     def forward(self, mx, my, sx, sy):
+        """
+        Parameters
+        ----------
+        mx, my : torch.autograd.Variable of shape (N, 1)
+            Mean of X and Y axes respectively.
+        sx, sy : torch.autograd.Variable of shape (N, 1)
+            Standard deviation of X and Y axes respectively.
+        """
+
         N = mx.size()[0]
         x, y = self._x, self._y
         x = x.expand(N, self._width, self._height)

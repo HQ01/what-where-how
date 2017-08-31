@@ -1,4 +1,5 @@
 from pdb import set_trace as st
+import numpy as np
 import torch as th
 from torch.autograd import Variable
 import torch.nn as nn
@@ -44,6 +45,8 @@ class Network0(nn.Module):
         self._gaussian_mask.cuda()
 
     def forward(self, data):
+        internal = {'data': data, 'mask_list': [], 'stat_list': []}
+
         N = data.size()[0]
         mx = (th.rand(N, 1) - 0.5) / 2
         my = (th.rand(N, 1) - 0.5) / 2
@@ -54,6 +57,9 @@ class Network0(nn.Module):
         mask = self._gaussian_mask(mx, my, sx, sy)
         prediction_list = []
         for _ in range(self._T):
+            internal['mask_list'].append(mask)
+            internal['stat_list'].append((mx, my, sx, sy))
+
             masked = mask * data
             features = self._feature_extractor(masked)
 
@@ -61,9 +67,12 @@ class Network0(nn.Module):
             mx, my, sx, sy = th.chunk(stats, 4, 1)
             mx, my = th.tanh(mx), th.tanh(my)
             sx, sy = th.exp(sx), th.exp(sy)
+            sx = th.clamp(sx, min=0.1)
+            sy = th.clamp(sy, min=0.1)
+
             mask = self._gaussian_mask(mx, my, sx, sy)
 
             category = self._classifier(features)
             prediction_list.append(category)
 
-        return prediction_list
+        return prediction_list, internal
