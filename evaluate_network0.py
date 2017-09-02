@@ -21,7 +21,7 @@ parser.add_argument('--mnist-path', type=str, default='mnist.dat')
 parser.add_argument('--n-epochs', type=int, default=100)
 parser.add_argument('--n-features', type=int, default=64)
 parser.add_argument('--nonlinear', action=parse_nonlinear, default=F.relu)
-parser.add_argument('--penalty', type=float, default=1)
+parser.add_argument('--penalty', type=float, default=0)
 parser.add_argument('--T', type=int, default=4)
 parser.add_argument('--units', action=partition('-', int), default=(256, ))
 args = parser.parse_args()
@@ -56,10 +56,10 @@ def vis_mask(internal):
     data = internal['data']
     N = data.size()[0]
     index = randint(0, N - 1)
-    data = data.data[index].numpy()
+    data = data.data[index].cpu().numpy()
     data = np.reshape(data, (28, 28))
     mask_list = internal['mask_list']
-    mask_list = list(mask.data[index].numpy() for mask in mask_list)
+    mask_list = list(mask.data[index].cpu().numpy() for mask in mask_list)
     mask_list = map(np.squeeze, mask_list)
     for mask, vis in zip(mask_list, mask_vis_tuple):
         vis.visualize(mask * data)

@@ -48,6 +48,7 @@ class Network0(nn.Module):
         mx = (th.rand(N, 1) - 0.5) / 2
         my = (th.rand(N, 1) - 0.5) / 2
         sx, sy = th.rand(N, 1), th.rand(N, 1)
+        # sx, sy = th.ones(N, 1) * 0.5, th.ones(N, 1) * 0.5
         if data.is_cuda:
             mx, my, sx, sy = map(lambda t: t.cuda(), (mx, my, sx, sy))
         mx, my, sx, sy = map(Variable, (mx, my, sx, sy))
