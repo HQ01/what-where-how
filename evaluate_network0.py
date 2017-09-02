@@ -22,8 +22,9 @@ parser.add_argument('--mnist-path', type=str, default='mnist.dat')
 parser.add_argument('--n-epochs', type=int, default=100)
 parser.add_argument('--n-features', type=int, default=64)
 parser.add_argument('--nonlinear', action=parse_nonlinear, default=F.relu)
+parser.add_argument('--penalty', type=float, default=1)
 parser.add_argument('--T', type=int, default=4)
-parser.add_argument('--units', action=partition('-', int), default=(256,))
+parser.add_argument('--units', action=partition('-', int), default=(256, ))
 args = parser.parse_args()
 
 if args.gpu < 0:
@@ -36,7 +37,7 @@ loader_dict, size = create_mnist_loaders(args.mnist_path, args.batch_size)
 
 n_pixels = size[0] * size[1]
 feature_extractor = MLP(n_pixels, args.n_features, args.units, args.nonlinear)
-model = Network0(feature_extractor, args.n_features, size, args.T)
+model = Network0(feature_extractor, args.n_features, size, args.T, args.penalty)
 if cuda:
     model.cuda()
 optimizer = th.optim.Adam(model.parameters(), args.lr)
@@ -48,6 +49,8 @@ va_vis = TraceVisualizer(visdom, {'title': 'validation accuracy'})
 
 opts = {'width': args.mask_vis_width, 'height': args.mask_vis_height}
 mask_vis_tuple = tuple(ImageVisualizer(visdom, opts) for _ in range(args.T))
+
+
 def vis_mask(internal):
     data = internal['data']
     N = data.size()[0]
@@ -60,6 +63,7 @@ def vis_mask(internal):
     for mask, vis in zip(mask_list, mask_vis_tuple):
         vis.visualize(mask * data)
 
+
 for epoch in range(args.n_epochs):
     print 'epoch %d' % epoch
 
@@ -70,20 +74,18 @@ for epoch in range(args.n_epochs):
             data, labels = data.cuda(), labels.cuda()
         data, labels = Variable(data), Variable(labels)
         prediction_list, internal = model(data)
-        loss_list = cross_entropy(prediction_list, labels)
-        tllist_list.append(loss_list)
+        loss, ce_list = model.loss(prediction_list, labels, internal)
+        tllist_list.append(ce_list)
 
-        loss = sum(loss_list) / args.T
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
         '''
         weight = model._mask_generator.weight.data.numpy()
         if np.any(np.isnan(weight)):
             st()
         '''
-        
+
         accuracy_list = accuracy(prediction_list, labels)
         talist_list.append(accuracy_list)
 
@@ -111,4 +113,4 @@ for epoch in range(args.n_epochs):
     for i, valist in enumerate(zip(*valist_list)):
         va = sum(valist) / len(valist)
         label = 'iteration %d' % i
-        va_vis.extend((va,), label)
+        va_vis.extend((va, ), label)

@@ -44,6 +44,7 @@ class GaussianMask(nn.Module):
             stat = th.unsqueeze(stat, 2)
             stat = stat.expand(N, self._width, self._height)
             return stat
+
         mx, my = expand(mx), expand(my)
         sx, sy = th.clamp(sx, min=1e-3), th.clamp(sy, min=1e-3)
         sx, sy = expand(sx), expand(sy)
@@ -51,6 +52,7 @@ class GaussianMask(nn.Module):
         z = ((x - mx) / sx)**2 + ((y - my) / sy)**2
         mask = 1 / (2 * math.pi * sx * sy) * th.exp(-z / 2)
         return mask
+
 
 def create_mnist_loaders(mnist_path, batch_size):
     partition_tuple = 'train', 'validate', 'test'
@@ -67,6 +69,7 @@ def create_mnist_loaders(mnist_path, batch_size):
 
     return loader_dict, size
 
+
 class parse_nonlinear(Action):
     def __call__(self, parser, namespace, values, option_string):
         if hasattr(F, values):
@@ -74,6 +77,7 @@ class parse_nonlinear(Action):
         else:
             values = None
         setattr(namespace, self.dest, values)
+
 
 def partition(delimiter, type):
     class action(Action):
@@ -83,6 +87,7 @@ def partition(delimiter, type):
             setattr(namespace, self.dest, values)
 
     return action
+
 
 def accuracy(p_list, labels):
     def accuracy(p):
@@ -95,6 +100,7 @@ def accuracy(p_list, labels):
     a_tuple = map(accuracy, p_list)
     return a_tuple
 
+
 def cross_entropy(prediction_list, label):
     loss_list = []
     for prediction in prediction_list:
@@ -102,6 +108,7 @@ def cross_entropy(prediction_list, label):
         loss_list.append(ce)
 
     return loss_list
+
 
 def weighted_cross_entropy(p_list, label, g):
     loss_list = []

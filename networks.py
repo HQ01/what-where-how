@@ -4,15 +4,11 @@ import torch as th
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
-from utilities import GaussianMask
+from utilities import *
 
 
 class MLP(nn.Module):
-    def __init__(self,
-                 in_features,
-                 out_features,
-                 features,
-                 nonlinear):
+    def __init__(self, in_features, out_features, features, nonlinear):
         super(MLP, self).__init__()
         shapes = zip((in_features, ) + features, features + (out_features, ))
         self._linear_list = nn.ModuleList()
@@ -32,13 +28,14 @@ class MLP(nn.Module):
 
 
 class Network0(nn.Module):
-    def __init__(self, feature_extractor, n_features, size, T):
+    def __init__(self, feature_extractor, n_features, size, T, penalty=0):
         super(Network0, self).__init__()
         self._feature_extractor = feature_extractor
         self._mask_generator = nn.Linear(n_features, 4)
         self._classifier = nn.Linear(n_features, 10)
         self._gaussian_mask = GaussianMask(*size)
         self._T = T
+        self._penalty = penalty
 
     def cuda(self):
         super(Network0, self).cuda()
@@ -76,3 +73,17 @@ class Network0(nn.Module):
             prediction_list.append(category)
 
         return prediction_list, internal
+
+    def loss(self, prediction_list, labels, internal):
+        ce_list = cross_entropy(prediction_list, labels)
+        ce = sum(ce_list) / self._T
+
+        if self._T > 1:
+            penalty = sum(
+                th.mean(th.abs(sx)) + th.mean(th.abs(sy))
+                for _, _, sx, sy in internal['stat_list'][1:]) / (self._T - 1)
+        else:
+            penalty = 0
+
+        value = ce + self._penalty * penalty
+        return value, ce_list

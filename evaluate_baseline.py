@@ -17,7 +17,7 @@ parser.add_argument('--mnist-path', type=str, default='mnist.dat')
 parser.add_argument('--n-epochs', type=int, default=100)
 parser.add_argument('--nonlinear', action=parse_nonlinear, default=F.relu)
 parser.add_argument('--T', type=int, default=20)
-parser.add_argument('--units', action=partition('-', int), default=(256,))
+parser.add_argument('--units', action=partition('-', int), default=(256, ))
 args = parser.parse_args()
 
 if args.gpu < 0:
@@ -28,6 +28,7 @@ else:
 
 loader_dict, size = create_mnist_loaders(args.mnist_path, args.batch_size)
 n_pixels = size[0] * size[1]
+
 
 def model(data, labels):
     network = MLP(n_pixels, 10, args.units, args.nonlinear)
@@ -46,6 +47,7 @@ def model(data, labels):
             optimizer.step()
 
     return prediction_list
+
 
 visdom = Visdom(env=__file__)
 va_vis = TraceVisualizer(visdom, {'title': 'validation accuracy'})

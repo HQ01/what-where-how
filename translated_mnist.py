@@ -19,6 +19,6 @@ for (data, labels) in datasets:
     for d in data:
         canvas = np.zeros((args.width, args.height))
         if args.x < 0 or args.y < 0:
-            x, y = randint(0, 
+            pass
         else:
             x, y = args.x, args.y

@@ -34,7 +34,7 @@ class VisdomVisualizer(Visualizer):
 class TraceVisualizer(VisdomVisualizer):
     def __init__(self, visdom, options={}, start=0):
         super(TraceVisualizer, self).__init__(visdom, options, start)
-        self._window = self._visdom.line(np.zeros((1,)), opts=options) # TODO
+        self._window = self._visdom.line(np.zeros((1, )), opts=options)  # TODO
         self._start_dict = {}
 
     def extend(self, s, label, clear=False):
@@ -62,6 +62,7 @@ class TensorboardVisualizer(Visualizer):
         for index, value in enumerate(s):
             self._logger.log_value(self._name, value, self._start + index)
 
+
 class ImageVisualizer(object):
     def __init__(self, visdom, opts={}):
         super(ImageVisualizer, self).__init__()
@@ -74,4 +75,5 @@ class ImageVisualizer(object):
         if self._window is None:
             self._window = self._visdom.image(image, opts=self._opts)
         else:
-            self._window = self._visdom.image(image, self._window, opts=self._opts)
+            self._window = self._visdom.image(
+                image, self._window, opts=self._opts)
