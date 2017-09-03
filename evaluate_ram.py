@@ -11,8 +11,6 @@ from visualizer import TraceVisualizer, ImageVisualizer
 
 parser = ArgumentParser()
 parser.add_argument('--batch-size', type=int, default=64)
-parser.add_argument('--glimpse-vis-height', type=int, default=100)
-parser.add_argument('--glimpse-vis-width', type=int, default=100)
 parser.add_argument('--gamma_sx', type=float, default=0.99)
 parser.add_argument('--gamma_sy', type=float, default=0.99)
 parser.add_argument('--gpu', type=int, default=-1)
@@ -25,8 +23,10 @@ parser.add_argument('--sx', type=float, default=1)
 parser.add_argument('--sy', type=float, default=1)
 parser.add_argument('--T', type=int, default=4)
 parser.add_argument('--vis-glimpse', action='store_true')
+parser.add_argument('--vis-height', type=int, default=100)
 parser.add_argument('--vis-interval', type=int, default=10)
 parser.add_argument('--vis-location', action='store_true')
+parser.add_argument('--vis-width', type=int, default=100)
 parser.add_argument('--w', type=int, default=8)
 args = parser.parse_args()
 print args
@@ -115,7 +115,7 @@ class LocationVisualizer(object):
             v.visualize(mask * data)
 
 
-opts = {'width': args.glimpse_vis_width, 'height': args.glimpse_vis_height}
+opts = {'width': args.vis_width, 'height': args.vis_height}
 g_vis = GlimpseVisualizer(args.T, args.n_scales, opts)
 w, h = size
 l_vis = LocationVisualizer(w, h, args.w, args.h, args.T, opts)

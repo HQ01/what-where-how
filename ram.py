@@ -58,7 +58,7 @@ class LocationNetwork(nn.Module):
                 self._sy = value
 
     def forward(self, h):
-        mean = self._linear(h)
+        mean = th.tanh(self._linear(h))
         if not self.training:
             return mean
 
