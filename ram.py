@@ -86,8 +86,8 @@ class LocationNetwork(nn.Module):
             return 0
 
         (mx, my, sx, sy), (x, y) = cache
-        log_px = -(x - mx) ** 2 / (2 * sx ** 2)
-        log_py = -(y - my) ** 2 / (2 * sy ** 2)
+        log_px = -(x - mx)**2 / (2 * sx**2)
+        log_py = -(y - my)**2 / (2 * sy**2)
         log_p = log_px + log_py
         value = th.mean(log_p * reward)
         return value
@@ -104,8 +104,10 @@ class RetinaEncoder(nn.Module):
             self._glimpse_size_sym = tf.placeholder("int32")
             self._patch_size_sym = tf.placeholder("int32")
             self._offsets_sym = tf.placeholder("float32")
-            glimpse = tf.image.extract_glimpse(self._input_sym, self._glimpse_size_sym, self._offsets_sym)
-            self._glimpse = tf.image.resize_images(glimpse, self._patch_size_sym)
+            glimpse = tf.image.extract_glimpse(
+                self._input_sym, self._glimpse_size_sym, self._offsets_sym)
+            self._glimpse = tf.image.resize_images(glimpse,
+                                                   self._patch_size_sym)
             self._glimpse.graph.finalize()
 
     def forward(self, input, offsets):
@@ -161,6 +163,7 @@ class RAM(nn.Module):
         if data.is_cuda:
             location, h = location.cuda(), h.cuda()
         location, h = Variable(location), Variable(h)
+        internal = {'data': data, 'glimpse_list': [], 'location_list': []}
         prediction_list = []
         if self.training:
             cache_list = []
@@ -176,10 +179,13 @@ class RAM(nn.Module):
             else:
                 location = self._location_network(h)
 
+            internal['glimpse_list'].append(retina)
+            internal['location_list'].append(location)
+
         if self.training:
-            return prediction_list, cache_list
+            return prediction_list, internal, cache_list
         else:
-            return prediction_list
+            return prediction_list, internal
 
     def loss(self, prediction_list, cache_list, label):
         ce_tuple = tuple(cross_entropy(prediction_list, label))
@@ -191,7 +197,8 @@ class RAM(nn.Module):
         reward, rl_loss = 0, 0
         for indicator, cache in reversed(zip(indicator_tuple, cache_list)):
             reward = reward + indicator
-            rl_loss = rl_loss + self._location_network.loss(reward.float(), cache)
+            rl_loss = rl_loss + self._location_network.loss(
+                reward.float(), cache)
 
         value = (ce_loss + rl_loss) / self._T
         return value, ce_tuple
