@@ -10,7 +10,7 @@ from utilities import *
 from visualizer import TraceVisualizer, ImageVisualizer
 
 parser = ArgumentParser()
-parser.add_argument('--batch-size', type=int, default=64)
+parser.add_argument('--batch-size', type=int, default=16)
 parser.add_argument('--gamma-sx', type=float, default=1)
 parser.add_argument('--gamma-sy', type=float, default=1)
 parser.add_argument('--gpu', type=int, default=-1)
@@ -20,12 +20,12 @@ parser.add_argument('--mnist-path', type=str, default='mnist.dat')
 parser.add_argument('--momentum', type=float, default=0.9)
 parser.add_argument('--n-epochs', type=int, default=100)
 parser.add_argument('--n-scales', type=int, default=1)
-parser.add_argument('--sx', type=float, default=1)
-parser.add_argument('--sy', type=float, default=1)
+parser.add_argument('--sx', type=float, default=0.1)
+parser.add_argument('--sy', type=float, default=0.1)
 parser.add_argument('--T', type=int, default=4)
 parser.add_argument('--vis-glimpse', action='store_true')
 parser.add_argument('--vis-height', type=int, default=100)
-parser.add_argument('--vis-interval', type=int, default=10)
+parser.add_argument('--vis-interval', type=int, default=100)
 parser.add_argument('--vis-location', action='store_true')
 parser.add_argument('--vis-width', type=int, default=100)
 parser.add_argument('--w', type=int, default=8)
@@ -122,12 +122,12 @@ w, h = size
 l_vis = LocationVisualizer(w, h, args.w, args.h, args.T, opts)
 
 sx, sy = args.sx, args.sy
+tllist_list, talist_list = [], []
 for epoch in range(args.n_epochs):
     print 'epoch %d' % epoch
 
     model.train()
     model.configure(sx=sx, sy=sy)
-    tllist_list, talist_list = [], []
     for iteration, batch in enumerate(loader_dict['train']):
         data, labels = batch
         data = data.view(args.batch_size, 1, *size)
@@ -150,17 +150,19 @@ for epoch in range(args.n_epochs):
             if args.vis_location:
                 l_vis.visualize(internal)
 
+            for i, tllist in enumerate(zip(*tllist_list)):
+                label = 'iteration %d' % i
+                tltuple = tuple(l.data[0] for l in tllist)
+                tl_vis.extend(tltuple, label)
+            tllist_list = []
+
+            for i, talist in enumerate(zip(*talist_list)):
+                label = 'iteration %d' % i
+                ta_vis.extend(talist, label)
+            talist_list = []
+
     sx *= args.gamma_sx
     sy *= args.gamma_sy
-
-    for i, tllist in enumerate(zip(*tllist_list)):
-        label = 'iteration %d' % i
-        tltuple = tuple(l.data[0] for l in tllist)
-        tl_vis.extend(tltuple, label)
-
-    for i, talist in enumerate(zip(*talist_list)):
-        label = 'iteration %d' % i
-        ta_vis.extend(talist, label)
 
     model.eval()
     valist_list = []
