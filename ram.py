@@ -1,4 +1,6 @@
 from __future__ import division
+from pdb import set_trace as st
+import time
 import numpy as np
 import tensorflow as tf
 import torch as th
@@ -95,6 +97,9 @@ class RetinaEncoder(nn.Module):
             glimpse = tf.image.extract_glimpse(input, glimpse_size, offsets)
             self._glimpse = tf.image.resize_images(glimpse, self._patch_size)
 
+        self._session = tf.Session()
+        self._session.run(tf.global_variables_initializer())
+
     def forward(self, input, offsets):
         cuda = input.is_cuda
         input, offsets = input.data.cpu().numpy(), offsets.data.cpu().numpy()
@@ -105,16 +110,15 @@ class RetinaEncoder(nn.Module):
             'glimpse_size:0': self._patch_size
         }
         glimpse_list = []
-        with tf.Session() as s:
-            s.run(tf.global_variables_initializer())
-            for _ in range(self._n_scales):
-                glimpse = s.run(self._glimpse, feed_dict)
-                feed_dict['glimpse_size:0'] *= 2
-                glimpse = np.transpose(glimpse, (0, 3, 2, 1))
-                glimpse = th.from_numpy(glimpse)
-                if cuda:
-                    glimpse = glimpse.cuda()
-                glimpse_list.append(glimpse)
+        for _ in range(self._n_scales):
+            glimpse = self._session.run(self._glimpse, feed_dict)
+            glimpse = np.transpose(glimpse, (0, 3, 2, 1))
+            glimpse = th.from_numpy(glimpse)
+            if cuda:
+                glimpse = glimpse.cuda()
+            glimpse_list.append(glimpse)
+            feed_dict['glimpse_size:0'] *= 2
+
         retina = th.cat(glimpse_list, 1)
         retina = Variable(retina)
         return retina

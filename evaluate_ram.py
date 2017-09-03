@@ -44,6 +44,7 @@ for epoch in range(args.n_epochs):
 
     tllist_list, talist_list = [], []
     for iteration, batch in enumerate(loader_dict['train']):
+        print iteration
         data, labels = batch
         data = data.view(args.batch_size, 1, *size)
         if cuda:
