@@ -50,8 +50,18 @@ class LocationNetwork(nn.Module):
         self._linear = nn.Linear(256, 2)
         self._sx, self._sy = args.sx, args.sy
 
+    def configure(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == 'sx':
+                self._sx = value
+            elif key == 'sy':
+                self._sy = value
+
     def forward(self, h):
         mean = self._linear(h)
+        if not self.training:
+            return mean
+
         mx, my = th.chunk(mean, 2, 1)
         sx = th.ones(mx.size()) * self._sx
         sy = th.ones(my.size()) * self._sy
@@ -137,24 +147,39 @@ class RAM(nn.Module):
 
         self._T = args.T
 
+    def configure(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == 'sx' or key == 'sy':
+                self._location_network.configure(**{key: value})
+
     def forward(self, data):
         N = data.size()[0]
-        location, cache = (th.rand(N, 2) - 0.5) * 2, None
+        location = (th.rand(N, 2) - 0.5) * 2
+        if self.training:
+            cache = None
         h = th.zeros(N, 256)
         if data.is_cuda:
             location, h = location.cuda(), h.cuda()
         location, h = Variable(location), Variable(h)
-        prediction_list, cache_list = [], []
+        prediction_list = []
+        if self.training:
+            cache_list = []
         for _ in range(self._T):
             retina = self._retina_encoder(data, location)
             glimpse = self._glimpse_network(retina, location)
             h = self._core_network(h, glimpse)
             category = self._classifier(h)
             prediction_list.append(category)
-            cache_list.append(cache)
-            location, cache = self._location_network(h)
+            if self.training:
+                cache_list.append(cache)
+                location, cache = self._location_network(h)
+            else:
+                location = self._location_network(h)
 
-        return prediction_list, cache_list
+        if self.training:
+            return prediction_list, cache_list
+        else:
+            return prediction_list
 
     def loss(self, prediction_list, cache_list, label):
         ce_tuple = tuple(cross_entropy(prediction_list, label))
