@@ -9,7 +9,7 @@ from visualizer import TraceVisualizer
 parser = ArgumentParser()
 parser.add_argument('--batch-size', type=int, default=64)
 parser.add_argument('--gpu', type=int, default=-1)
-parser.add_argument('--h', type=int, default=4)
+parser.add_argument('--h', type=int, default=8)
 parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--mnist-path', type=str, default='mnist.dat')
 parser.add_argument('--n-epochs', type=int, default=100)
@@ -17,7 +17,7 @@ parser.add_argument('--n-scales', type=int, default=1)
 parser.add_argument('--sx', type=float, default=0.1)
 parser.add_argument('--sy', type=float, default=0.1)
 parser.add_argument('--T', type=int, default=4)
-parser.add_argument('--w', type=int, default=4)
+parser.add_argument('--w', type=int, default=8)
 args = parser.parse_args()
 print args
 
@@ -44,7 +44,6 @@ for epoch in range(args.n_epochs):
 
     tllist_list, talist_list = [], []
     for iteration, batch in enumerate(loader_dict['train']):
-        print iteration
         data, labels = batch
         data = data.view(args.batch_size, 1, *size)
         if cuda:
@@ -72,6 +71,7 @@ for epoch in range(args.n_epochs):
 
     valist_list = []
     for (data, labels) in loader_dict['validate']:
+        data = data.view(args.batch_size, 1, *size)
         if cuda:
             data, labels = data.cuda(), labels.cuda()
         data, labels = Variable(data), Variable(labels)

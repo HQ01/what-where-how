@@ -86,38 +86,40 @@ class LocationNetwork(nn.Module):
 class RetinaEncoder(nn.Module):
     def __init__(self, args):
         super(RetinaEncoder, self).__init__()
-        self._patch_size = np.array([args.w, args.h])
+        self._patch_size = np.array([args.w, args.h], np.int32)
         self._n_scales = args.n_scales
 
         with tf.device('/cpu:0'):
-            input = tf.placeholder("float32", None, 'input')
-            glimpse_size = tf.placeholder("int32", None, 'glimpse_size')
-            patch_size = tf.Variable(self._patch_size, False)
-            offsets = tf.placeholder("float32", None, 'offsets')
-            glimpse = tf.image.extract_glimpse(input, glimpse_size, offsets)
-            self._glimpse = tf.image.resize_images(glimpse, self._patch_size)
-
-        self._session = tf.Session()
-        self._session.run(tf.global_variables_initializer())
+            self._input_sym = tf.placeholder("float32")
+            self._glimpse_size_sym = tf.placeholder("int32")
+            self._patch_size_sym = tf.placeholder("int32")
+            self._offsets_sym = tf.placeholder("float32")
+            glimpse = tf.image.extract_glimpse(self._input_sym, self._glimpse_size_sym, self._offsets_sym)
+            self._glimpse = tf.image.resize_images(glimpse, self._patch_size_sym)
+            self._glimpse.graph.finalize()
 
     def forward(self, input, offsets):
         cuda = input.is_cuda
         input, offsets = input.data.cpu().numpy(), offsets.data.cpu().numpy()
         input = np.transpose(input, (0, 3, 2, 1))
+        node = tf.get_default_graph()
         feed_dict = {
-            'input:0': input,
-            'offsets:0': offsets,
-            'glimpse_size:0': self._patch_size
+            self._input_sym: input,
+            self._offsets_sym: offsets,
+            self._glimpse_size_sym: self._patch_size,
+            self._patch_size_sym: self._patch_size,
         }
         glimpse_list = []
-        for _ in range(self._n_scales):
-            glimpse = self._session.run(self._glimpse, feed_dict)
-            glimpse = np.transpose(glimpse, (0, 3, 2, 1))
-            glimpse = th.from_numpy(glimpse)
-            if cuda:
-                glimpse = glimpse.cuda()
-            glimpse_list.append(glimpse)
-            feed_dict['glimpse_size:0'] *= 2
+        with tf.Session() as s:
+            for _ in range(self._n_scales):
+                glimpse = s.run(self._glimpse, feed_dict)
+                glimpse = np.transpose(glimpse, (0, 3, 2, 1))
+                glimpse = th.from_numpy(glimpse)
+                if cuda:
+                    glimpse = glimpse.cuda()
+                glimpse_list.append(glimpse)
+                glimpse_size = feed_dict[self._glimpse_size_sym]
+                feed_dict[self._glimpse_size_sym] = glimpse_size * 2
 
         retina = th.cat(glimpse_list, 1)
         retina = Variable(retina)
