@@ -1,3 +1,4 @@
+from __future__ import division
 from pdb import set_trace as st
 from argparse import ArgumentParser
 from random import randint
@@ -10,7 +11,7 @@ from utilities import *
 from visualizer import TraceVisualizer, ImageVisualizer
 
 parser = ArgumentParser()
-parser.add_argument('--batch-size', type=int, default=16)
+parser.add_argument('--batch-size', type=int, default=20)
 parser.add_argument('--gamma-sx', type=float, default=1)
 parser.add_argument('--gamma-sy', type=float, default=1)
 parser.add_argument('--gpu', type=int, default=-1)
@@ -43,7 +44,6 @@ loader_dict, size = create_mnist_loaders(args.mnist_path, args.batch_size)
 model = RAM(args)
 if cuda:
     model.cuda()
-optimizer = th.optim.Adam(model.parameters(), args.lr)
 
 visdom = Visdom(env=__file__)
 tl_vis = TraceVisualizer(visdom, {'title': 'training loss'})
@@ -124,10 +124,13 @@ l_vis = LocationVisualizer(w, h, args.w, args.h, args.T, opts)
 sx, sy = args.sx, args.sy
 tllist_list, talist_list = [], []
 for epoch in range(args.n_epochs):
-    print 'epoch %d' % epoch
-
     model.train()
     model.configure(sx=sx, sy=sy)
+    lr = (args.n_epochs - epoch) / args.n_epochs * args.lr
+    optimizer = th.optim.SGD(model.parameters(), lr, args.momentum)
+
+    print 'epoch %d lr %f' % (epoch, lr)
+
     for iteration, batch in enumerate(loader_dict['train']):
         data, labels = batch
         data = data.view(args.batch_size, 1, *size)
